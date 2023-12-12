@@ -3,7 +3,7 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : itchaox
- * @LastTime   : 2023-11-30 00:00
+ * @LastTime   : 2023-12-13 01:39
  * @desc       : 
 -->
 <script setup>
@@ -29,20 +29,36 @@
   const modelList = ref([
     {
       id: '1',
-      name: '英文字母转小写',
+      name: '全部小写',
     },
     {
       id: '2',
-      name: '英文字母转大写',
+      name: '全部大写',
     },
     {
       id: '3',
       name: '单词首字母大写',
     },
 
+    // FIXME 句子首字母大写后面在做
+    // {
+    //   id: '4',
+    //   name: '句子首字母大写',
+    // },
+
     {
-      id: '4',
-      name: '英文字母大小写反转',
+      id: '5',
+      name: '反转大小写',
+    },
+
+    {
+      id: '6',
+      name: '标题大写',
+    },
+
+    {
+      id: '7',
+      name: '中文符号转英文',
     },
   ]);
 
@@ -55,7 +71,13 @@
       case '3':
         return capitalizeFirstLetterOfWords;
       case '4':
+        return capitalizeFirstLetterInSentences;
+      case '5':
         return toggleCase;
+      case '6':
+        return titleUpperCase;
+      case '7':
+        return chineseToEnglishPunctuation;
     }
   };
 
@@ -139,15 +161,45 @@
   });
 
   async function confirm() {
+    // isLoading.value = true;
+    // if (selectModel.value === 'cell') {
+    //   await cellModel();
+    // } else if (selectModel.value === 'field') {
+    //   await fieldModel();
+    // } else {
+    //   await databaseModel();
+    // }
+    // isLoading.value = false;
+
+    // {
     isLoading.value = true;
     if (selectModel.value === 'cell') {
-      await cellModel();
+      if (currentFieldId.value && recordId.value) {
+        await cellModel();
+      } else {
+        ElMessage({
+          type: 'error',
+          message: '请选择需要转换的单元格!',
+          duration: 1500,
+          showClose: true,
+        });
+      }
     } else if (selectModel.value === 'field') {
-      await fieldModel();
+      if (fieldId.value) {
+        await fieldModel();
+      } else {
+        ElMessage({
+          type: 'error',
+          message: '请选择需要转换的字段!',
+          duration: 1500,
+          showClose: true,
+        });
+      }
     } else {
       await databaseModel();
     }
     isLoading.value = false;
+    // }
   }
 
   async function cellModel() {
@@ -289,11 +341,99 @@
     return result;
   };
 
+  // 英文句子首字母大写,其余小写
+  const capitalizeFirstLetterInSentences = (input) => {
+    // // 使用正则表达式匹配句子的第一个字母，并将其转换为大写
+
+    const result = input.replace(/([^.?!]+[.?!])\s*([a-zA-Z])/g, (match, group1, group2) => {
+      // 使用正则表达式匹配符号右侧的字母，并将其转换为小写
+      const afterPunctuation = group1.replace(/[.?!]\s*([a-zA-Z])/g, (match, group) => {
+        return match.toLowerCase();
+      });
+
+      // 将整个匹配到的文本与转换后的文本组合起来
+      return afterPunctuation + group2.toUpperCase();
+    });
+
+    return result;
+  };
+
   // 英文大小写反转
   const toggleCase = (input) => {
     return input.replace(/[a-zA-Z]/g, (char) => {
       return char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase();
     });
+  };
+
+  // 标题大写
+  const titleUpperCase = (input) => {
+    const articlesAndConjunctions = [
+      'a',
+      'an',
+      'the',
+      'and',
+      'but',
+      'or',
+      'for',
+      'nor',
+      'so',
+      'yet',
+      'as',
+      'at',
+      'by',
+      'for',
+      'in',
+      'of',
+      'on',
+      'to',
+      'with',
+    ];
+
+    const result = input.replace(/\b\w+\b/g, (word) => {
+      // 转换单词的首字母大写，除非是连词或冠词
+      return articlesAndConjunctions.includes(word.toLowerCase())
+        ? word
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    });
+
+    return result;
+  };
+
+  // 中文符号转英文
+  const chineseToEnglishPunctuation = (input) => {
+    // 映射中文符号到对应的英文符号
+    const punctuationMap = {
+      '，': ',',
+      '。': '.',
+      '；': ';',
+      '：': ':',
+      '“': '"',
+      '”': '"',
+      '？': '?',
+      '！': '!',
+      '『': '[',
+      '』': ']',
+      '（': '(',
+      '）': ')',
+      '｛': '{',
+      '｝': '}',
+      '【': '[',
+      '】': ']',
+      '—': '-',
+      '－': '-',
+      '¥': '$',
+      '》': '>',
+      '《': '<',
+      '、': '\\',
+    };
+
+    // 使用正则表达式匹配中文字符，包括汉字、中文标点符号、“”、￥符号
+    const result = input?.replace(/[\u3000-\u303F\u4E00-\u9FA5\uFF00-\uFFEF“”¥]/gu, (match) => {
+      // 如果匹配到了中文符号，则返回对应的英文符号，否则保持不变
+      return punctuationMap[match] || match;
+    });
+
+    return result;
   };
 </script>
 
@@ -303,7 +443,7 @@
       <div class="tip">
         <div class="tip-text title">操作步骤:</div>
 
-        <div class="tip-text">1. 选择目标格式</div>
+        <div class="tip-text">1. 选择转换模式</div>
         <div
           class="tip-text"
           v-if="selectModel === 'cell'"
@@ -322,12 +462,12 @@
         >
           2. 选择需要转换的数据表
         </div>
-        <div class="tip-text">3. 点击[确认转换]按钮即可</div>
+        <div class="tip-text">3. 点击【确认转换】按钮即可</div>
       </div>
     </div>
 
     <div class="label">
-      <div class="text">转化模式:</div>
+      <div class="text">转换模式:</div>
       <el-select
         v-model="changeModelId"
         placeholder="请选择转换模式"
